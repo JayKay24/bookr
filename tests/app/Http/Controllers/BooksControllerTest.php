@@ -2,6 +2,7 @@
 
 namespace Tests\App\Http\Controllers;
 
+use Illuminate\Http\Response;
 use TestCase;
 use Carbon\Carbon;
 use Laravel\Lumen\Testing\DatabaseMigrations;
@@ -237,6 +238,42 @@ class BooksControllerTest extends TestCase
     {
         $this->delete('/books/this-is-invalid')
             ->seeStatusCode(404);
+    }
+
+    /** @test **/
+    public function title_passes_create_validation_when_exactly_max()
+    {
+        // Creating a new Book
+        $book = factory(\App\Book::class)->make();
+        $book->title = str_repeat('a', 255);
+
+        $this->post('/books', [
+            'title' => $book->title,
+            'description' => $book->description,
+            'author' => $book->author
+        ], ['Accept' => 'application/json']);
+
+        $this
+            ->seeStatusCode(Response::HTTP_CREATED)
+            ->seeInDatabase('books', ['title' => $book->title]);
+    }
+
+    /** @test **/
+    public function title_passes_update_validation_when_exactly_max()
+    {
+        // Updating a Book
+        $book = factory(\App\Book::class)->create();
+        $book->title = str_repeat('a', 255);
+
+        $this->put("/books/{$book->id}", [
+            'title' => $book->title,
+            'description' => $book->description,
+            'author' => $book->author
+        ], ['Accept' => 'application/json']);
+
+        $this
+            ->seeStatusCode(Response::HTTP_OK)
+            ->seeInDatabase('books', ['title' => $book->title]);
     }
 
 }
