@@ -33,9 +33,10 @@ class BooksControllerTest extends TestCase
     /** @test **/
     public function index_should_return_a_collection_of_records()
     {
-        $books = factory('App\Book', 2)->create();
+        $books = $this->bookFactory(2);
 
         $this->get('/books');
+
         $content = json_decode($this->response->getContent(), true);
         $this->assertArrayHasKey('data', $content);
 
@@ -44,7 +45,7 @@ class BooksControllerTest extends TestCase
                 'id' => $book->id,
                 'title' => $book->title,
                 'description' => $book->description,
-                'author' => $book->author,
+                'author' => $book->author->name, // Check the author's name
                 'created' => $book->created_at->toIso8601String(),
                 'updated' => $book->updated_at->toIso8601String(),
             ]);
@@ -54,7 +55,7 @@ class BooksControllerTest extends TestCase
     /** @test **/
     public function show_should_return_a_valid_book()
     {
-        $book = factory('App\Book')->create();
+        $book = $this->bookFactory();
 
         $this
             ->get("/books/{$book->id}")
@@ -70,7 +71,7 @@ class BooksControllerTest extends TestCase
         $this->assertEquals($book->id, $data['id']);
         $this->assertEquals($book->title, $data['title']);
         $this->assertEquals($book->description, $data['description']);
-        $this->assertEquals($book->author, $data['author']);
+        $this->assertEquals($book->author->name, $data['author']);
         $this->assertEquals($book->created_at->toIso8601String(), $data['created']);
         $this->assertEquals($book->updated_at->toIso8601String(), $data['updated']);
     }
@@ -102,14 +103,19 @@ class BooksControllerTest extends TestCase
     /** @test **/
     public function store_should_save_new_book_in_the_database()
     {
+        $author = factory(\App\Author::class)->create([
+            'name' => 'H. G. Wells'
+        ]);
+
         $this
             ->post('/books', [
                 'title' => 'The Invisible Man',
                 'description' => 'An invisible man is trapped in the terror of his own creation',
-                'author' => 'H. G. Wells'
-            ]);
+                'author_id' => $author->id
+            ], ['Accept' => 'application/json']);
 
         $body = json_decode($this->response->getContent(), true);
+//        dd($body, $this->response->getStatusCode());
         $this->assertArrayHasKey('data', $body);
 
         $data = $body['data'];
@@ -132,11 +138,13 @@ class BooksControllerTest extends TestCase
     /** @test **/
     public function store_should_respond_with_a_201_and_location_header_when_successful()
     {
+        $author = factory(\App\Author::class)->create();
+
         $this->post('/books', [
             'title' => 'The Invisible Man',
             'description' => 'An invisible man is trapped in the terror of his own creation',
-            'author' => 'H. G. Wells'
-        ]);
+            'author_id' => $author->id
+        ], ['Accept' => 'application/json']);
 
         $this
             ->seeStatusCode(201)
@@ -146,32 +154,30 @@ class BooksControllerTest extends TestCase
     /** @test **/
     public function update_should_only_change_fillable_fields()
     {
-        $book = factory('App\Book')->create([
-            'title' => 'War of the Worlds',
-            'description' => 'A science fiction masterpiece about Martians invading London',
-            'author' => 'H. G. Wells'
-        ]);
+        $book = $this->bookFactory();
+//        $book = factory('App\Book')->create([
+//            'title' => 'War of the Worlds',
+//            'description' => 'A science fiction masterpiece about Martians invading London',
+//            'author' => 'H. G. Wells'
+//        ]);
 
         $this->notSeeInDatabase('books', [
             'title' => 'The War of the Worlds',
             'description' => 'The book is way better than the movie.',
-            'author' => 'Wells, H. G.'
         ]);
 
         $this->put("/books/{$book->id}", [
             'id' => 5,
             'title' => 'The War of the Worlds',
-            'description' => 'The book is way better than the movie.',
-            'author' => 'Wells, H. G.'
-        ]);
+            'description' => 'The book is way better than the movie.'
+        ], ['Accept' => 'application/json']);
 
         $this
             ->seeStatusCode(200)
             ->seeJson([
                 'id' => 1,
                 'title' => 'The War of the Worlds',
-                'description' => 'The book is way better than the movie.',
-                'author' => 'Wells, H. G.'
+                'description' => 'The book is way better than the movie.'
             ])
             ->seeInDatabase('books', [
                 'title' => 'The War of the Worlds'
@@ -211,7 +217,9 @@ class BooksControllerTest extends TestCase
     /** @test **/
     public function destroy_should_remove_a_valid_book()
     {
-        $book = factory('App\Book')->create();
+//        $book = factory('App\Book')->create();
+        $book = $this->bookFactory();
+
         $this
             ->delete("/books/{$book->id}")
             ->seeStatusCode(204)
@@ -244,13 +252,13 @@ class BooksControllerTest extends TestCase
     public function title_passes_create_validation_when_exactly_max()
     {
         // Creating a new Book
-        $book = factory(\App\Book::class)->make();
+        $book = $this->bookFactory();
         $book->title = str_repeat('a', 255);
 
         $this->post('/books', [
             'title' => $book->title,
             'description' => $book->description,
-            'author' => $book->author
+            'author_id' => $book->author->id // Pass a valid author
         ], ['Accept' => 'application/json']);
 
         $this
@@ -262,18 +270,17 @@ class BooksControllerTest extends TestCase
     public function title_passes_update_validation_when_exactly_max()
     {
         // Updating a Book
-        $book = factory(\App\Book::class)->create();
+        $book = $this->bookFactory();
         $book->title = str_repeat('a', 255);
 
         $this->put("/books/{$book->id}", [
             'title' => $book->title,
             'description' => $book->description,
-            'author' => $book->author
+            'author_id' => $book->author->id
         ], ['Accept' => 'application/json']);
 
         $this
             ->seeStatusCode(Response::HTTP_OK)
             ->seeInDatabase('books', ['title' => $book->title]);
     }
-
 }

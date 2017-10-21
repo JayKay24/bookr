@@ -22,20 +22,17 @@ class BooksControllerValidationTest extends TestCase
 
         $this->assertArrayHasKey('title', $body);
         $this->assertArrayHasKey('description', $body);
-        $this->assertArrayHasKey('author', $body);
 
         $this->assertEquals(["The title field is required."], $body['title']);
-        $this->assertEquals(["Please provide a description."], $body['description']);
-        $this->assertEquals(["The author field is required."], $body['author']);
+        $this->assertEquals(["Please fill out the description."], $body['description']);
     }
 
     /** @test **/
     public function it_validates_required_fields_when_updating_a_book()
     {
-        $book = factory(\App\Book::class)->create();
+        $book = $this->bookFactory();
 
         $this->put("/books/{$book->id}", [], ['Accept' => 'application/json']);
-
         $this->assertEquals(Response::HTTP_UNPROCESSABLE_ENTITY,
             $this->response->getStatusCode());
 
@@ -43,24 +40,22 @@ class BooksControllerValidationTest extends TestCase
 
         $this->assertArrayHasKey('title', $body);
         $this->assertArrayHasKey('description', $body);
-        $this->assertArrayHasKey('author', $body);
 
         $this->assertEquals(["The title field is required."], $body['title']);
         $this->assertEquals(["Please provide a description."], $body['description']);
-        $this->assertEquals(["The author field is required."], $body['author']);
     }
 
     /** @test **/
     public function title_fails_create_validation_when_just_too_long()
     {
         // Creating a book
-        $book = factory(\App\Book::class)->make();
+        $book = $this->bookFactory();
         $book->title = str_repeat('a', 256);
 
         $this->post("/books", [
             'title' => $book->title,
             'description' => $book->description,
-            'author' => $book->author,
+            'author_id' => $book->author->id,
         ], ['Accept' => 'application/json']);
 
         $this
@@ -75,13 +70,13 @@ class BooksControllerValidationTest extends TestCase
     public function title_fails_update_validation_when_just_too_long()
     {
         // Updating a book
-        $book = factory(\App\Book::class)->create();
+        $book = $this->bookFactory();
         $book->title = str_repeat('a', 256);
 
         $this->put("/books/{$book->id}", [
             'title' => $book->title,
             'description' => $book->description,
-            'author' => $book->author,
+            'author_id' => $book->author->id,
         ], ['Accept' => 'application/json']);
 
         $this
