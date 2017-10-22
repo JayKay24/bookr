@@ -13,9 +13,14 @@ class Controller extends BaseController
      */
     private $fractal;
 
+    /**
+     * Controller constructor.
+     * @param FractalResponse $fractal
+     */
     public function __construct(FractalResponse $fractal)
     {
         $this->fractal = $fractal;
+        $this->fractal->parseIncludes();
     }
 
     /**
