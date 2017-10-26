@@ -20,4 +20,12 @@ class Book extends Model
     {
         return $this->belongsTo(Author::class);
     }
+
+    /**
+     * @return \Illuminate\Database\Eloquent\Relations\BelongsToMany
+     */
+    public function bundles()
+    {
+        return $this->belongsToMany(\App\Bundle::class);
+    }
 }
