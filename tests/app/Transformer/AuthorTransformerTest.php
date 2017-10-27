@@ -32,6 +32,14 @@ class AuthorTransformerTest extends TestCase
     {
         $author = factory(\App\Author::class)->create();
 
+        $author->ratings()->save(
+            factory(\App\Rating::class)->make(['value' => 5])
+        );
+
+        $author->ratings()->save(
+            factory(\App\Rating::class)->make(['value' => 3])
+        );
+
         $actual = $this->subject->transform($author);
 
         $this->assertEquals($author->id, $actual['id']);
@@ -46,6 +54,14 @@ class AuthorTransformerTest extends TestCase
             $author->updated_at->toIso8601String(),
             $actual['updated']
         );
+
+        // Rating
+        $this->assertArrayHasKey('rating', $actual);
+        $this->assertInternalType('array', $actual['rating']);
+        $this->assertEquals(4, $actual['rating']['average']);
+        $this->assertEquals(5, $actual['rating']['max']);
+        $this->assertEquals(80, $actual['rating']['percent']);
+        $this->assertEquals(2, $actual['rating']['count']);
     }
 
     /**
